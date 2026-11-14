@@ -164,7 +164,7 @@ class Harness:
     def close(self):
         self.m.allow_exit=True;self.m.keys.extend([24,24]);self.until(lambda:self.m.pc==self.m.stop)
         assert not self.m.drawing and not self.m.allocations and not self.m.invalid
-        assert all(c['mode']=='rb' and c['path'] in ('A:\\QQMusic.auth0','A:\\QQMusic.auth1','A:\\QQMusic.cfg') for c in self.m.file_calls)
+        assert all(c['mode']=='rb' and c['path'] in self.m.owned_paths for c in self.m.file_calls)
         assert struct.unpack('<I',self.m.get(0x810f0200,4))[0]==57
         self.backend.close();self.audio.close()
 

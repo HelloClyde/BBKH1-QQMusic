@@ -9,26 +9,26 @@ def main():
     if tag.startswith('refs/tags/') and tag!='refs/tags/v'+version:raise RuntimeError('Tag/VERSION mismatch')
     source=ROOT/'dist/H1QQMusic.bda';meta=json.loads(source.with_suffix('.build.json').read_text(encoding='utf-8'))
     assert meta['version']==version and meta['sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
-    assert validate_bda(source)['ok'] and meta['sdk_commit']=='63fa3c825feae5d9a1fa04572458fd5a5dbe847b'
+    assert validate_bda(source)['ok'] and meta['sdk_commit']=='259c11f31fb31343b8a08e046037d89934ee1132'
     out=ROOT/'dist/release';out.mkdir(exist_ok=True)
     shutil.copy2(source,out/source.name)
     (out/'H1QQMusic.build.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     notices=[('LICENSE','licenses/QQMusic-GPL-3.0.txt'),('THIRD_PARTY.md','THIRD_PARTY.md'),
         ('sdk/LICENSE','licenses/H1-SDK-Apache-2.0.txt'),('sdk/NOTICE','licenses/H1-SDK-NOTICE.txt'),
-        ('third_party/ffmpeg-0.6.7/COPYING.LGPLv2.1','licenses/FFmpeg-LGPL-2.1.txt'),
-        ('third_party/ffmpeg-0.6.7/LICENSE','licenses/FFmpeg-LICENSE.txt'),
-        ('third_party/musl-1.2.5/COPYRIGHT','licenses/musl-COPYRIGHT.txt'),
-        ('third_party/tlsf/tlsf.h','licenses/TLSF-notice.txt'),
-        ('third_party/libpng-1.6.43/LICENSE','licenses/libpng-LICENSE.txt'),
-        ('third_party/zlib-1.3.1/LICENSE','licenses/zlib-LICENSE.txt'),
-        ('third_party/jpeg-9f/README','licenses/IJG-README.txt'),
+        ('sdk/sdk/media/third_party/ffmpeg-0.6.7/COPYING.LGPLv2.1','licenses/FFmpeg-LGPL-2.1.txt'),
+        ('sdk/sdk/media/third_party/ffmpeg-0.6.7/LICENSE','licenses/FFmpeg-LICENSE.txt'),
+        ('sdk/sdk/media/third_party/musl-1.2.5/COPYRIGHT','licenses/musl-COPYRIGHT.txt'),
+        ('sdk/sdk/media/third_party/tlsf/tlsf.h','licenses/TLSF-notice.txt'),
+        ('sdk/sdk/media/third_party/libpng-1.6.43/LICENSE','licenses/libpng-LICENSE.txt'),
+        ('sdk/sdk/media/third_party/zlib-1.3.1/LICENSE','licenses/zlib-LICENSE.txt'),
+        ('sdk/sdk/media/third_party/jpeg-9f/README','licenses/IJG-README.txt'),
         ('third_party/cjson/LICENSE','licenses/cJSON-MIT.txt'),
-        ('assets/fonts/OFL-1.1.txt','licenses/Unifont-OFL.txt'),
-        ('assets/fonts/LICENSE-upstream.txt','licenses/Unifont-upstream.txt'),
-        ('assets/fonts/Noto-OFL.txt','licenses/Noto-OFL.txt')]
+        ('sdk/sdk/media/fonts/OFL-1.1.txt','licenses/Unifont-OFL.txt'),
+        ('sdk/sdk/media/fonts/LICENSE-upstream.txt','licenses/Unifont-upstream.txt'),
+        ('sdk/sdk/media/fonts/Noto-OFL.txt','licenses/Noto-OFL.txt')]
     instruction=('QQ音乐 '+version+' 预览版\n将“应用/程序/H1QQMusic.bda”复制到H1 A盘对应目录。\n'
         '仅H1/Y100 V1.41；ESP32-S3通用固件0.4.4。先用Wi-Fi设置完成配网。\n'
-        '账号文件和QQMusic.cfg由H1管理，更新不需要删除。按B/播放页右上切换模式。\n'
+        '账号和模式配置在A:\\飞天音乐，旧文件校验后自动迁移。按B/播放页右上切换模式。\n'
         '源码与完整许可：https://github.com/HelloClyde/BBKH1-QQMusic/tree/v'+version+'\n'
         '本预览版的90秒短停修复、自动切歌/模式仍待最终实体试听。详见仓库验证记录。\n')
     entries={'应用/程序/H1QQMusic.bda':source.read_bytes(),'安装说明.txt':instruction.encode('utf-8')}

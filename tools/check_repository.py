@@ -12,12 +12,12 @@ def main():
             for n in ast.walk(ast.parse(p.read_text(encoding='utf-8'))):
                 modules=[a.name for a in n.names] if isinstance(n,ast.Import) else [n.module or ''] if isinstance(n,ast.ImportFrom) else []
                 assert not bad_imports.intersection(modules),str(p.relative_to(ROOT))
-    for name in ('src/main.c','src/platform/images.c','src/platform/aac_remote.c','tests/support/firmware.py','tests/support/mailbox.py','assets/fonts/OFL-1.1.txt'):
+    for name in ('src/main.c','tests/support/firmware.py','tests/support/mailbox.py','sdk/sdk/media/fonts/OFL-1.1.txt'):
         assert (ROOT/name).is_file(),name
-    image=(ROOT/'src/platform/images.c').read_text(encoding='utf-8')
-    assert 'news_image_url' not in image and 'ithome' not in image,'Provider-specific image URL policy leaked into decoder'
-    aac=(ROOT/'src/platform/aac_remote.c').read_text(encoding='utf-8')
-    assert '#define bili_' not in aac and '../h1-' not in aac,'AAC client must be standalone'
+    assert not any((ROOT/'src'/name).exists() for name in ('platform','net','runtime','ui','font.h','native_input.h'))
+    assert set(p.name for p in (ROOT/'third_party').iterdir())=={'cjson'}
+    for name in ('h1_aac.h','h1_draw.h','h1_image.h','h1_font16.h'):
+        assert (ROOT/'sdk/sdk/include'/name).is_file()
     readme=(ROOT/'README.md').read_text(encoding='utf-8')
     assert all('## '+s in readme for s in ('快速开始','截图','依赖','感谢'))
     print('PASS repository scope: music app, SDK dependencies and pure model support only')

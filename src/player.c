@@ -4,17 +4,26 @@
 #include "h1_sdk.h"
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
-#include "platform/aac_remote.h"
-#include "platform/audio.h"
+#include "h1_aac.h"
+#include "h1_media_audio.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-extern unsigned h1ns_audio_pending(void);
-extern int h1ns_audio_video_wait(void);
-extern int h1ns_audio_clock(uint32_t *,unsigned *);
-extern void h1ns_audio_clock_reset(void);
-extern void h1ns_audio_snapshot(void);
-extern volatile uint32_t h1ns_audio_state[8];
+static h1_aac decoder;
+volatile uint32_t qm_aac_state[16];
+static int aac_rpc(void *p,unsigned op,const void *in,unsigned n,void *out,unsigned cap,unsigned *got)
+{(void)p;return qm_net_compute_rpc(op,in,n,out,cap,got);}
+static unsigned aac_features(void *p){(void)p;return qm_net_features();}
+static uint32_t aac_time(void *p){(void)p;return h1_timer_read_ms();}
+static void aac_idle(void *p){(void)p;qm_idle(NULL);}
+static int aac_cancelled(void *p){(void)p;return qm_cancelled;}
+static int decoder_open(const uint8_t *asc,unsigned n)
+{
+    static unsigned initialized;
+    if(!initialized){h1_aac_driver d={NULL,aac_rpc,aac_features,aac_time,aac_idle,aac_cancelled};
+        h1_aac_init(&decoder,&d,qm_aac_state);initialized=1;}
+    return h1_aac_open(&decoder,asc,n);
+}
 qm_player_state qm_play;
 /* Retained on normal exit; contains counters/error codes only, no URLs/tokens. */
 volatile uint32_t qm_player_diag[16]={0x31444d51u,1};
@@ -37,14 +46,8 @@ static unsigned remote_pending(void)
 static int remote_level(int force)
 {
     if(!force&&v.remote_known&&qm_time()-v.remote_poll_ms<50)return 0;
-    uint8_t request[4],reply[32];unsigned n=0;h1net_put32(request,qm_aac_state[5]);
-    int e=qm_net_compute_rpc(H1NET_AUDIO_INFO,request,4,reply,sizeof reply,&n);if(e)return e;
-    if(n!=32||h1net_u32(reply)!=qm_aac_state[5]||h1net_u32(reply+8)!=32768||
-       h1net_u32(reply+12)!=1||h1net_u32(reply+20)<qm_aac_state[8]||
-       h1net_u32(reply+24)!=h1net_u32(reply+20)-qm_aac_state[8]||h1net_u32(reply+24)>131072||
-       h1net_u32(reply+4)<1||h1net_u32(reply+4)>3)return -3;
-    if(h1net_u32(reply+4)==3)return -5;
-    v.remote_produced=h1net_u32(reply+20);v.remote_poll_ms=qm_time();v.remote_known=1;
+    h1_aac_info info;int e=h1_aac_get_info(&decoder,&info);if(e)return e;
+    v.remote_produced=info.produced;v.remote_poll_ms=qm_time();v.remote_known=1;
     qm_buffer_diag[2]++;qm_buffer_diag[3]=remote_pending();
     if(remote_pending()>qm_buffer_diag[4])qm_buffer_diag[4]=remote_pending();return 0;
 }
@@ -106,7 +109,7 @@ static int pump(void *unused)
     (void)unused;position();if(v.clock_recover&&recover_clock())return -1;if(v.prefilling||h1ns_audio_video_wait())return 0;
     int e=remote_level(!v.remote_known||!remote_pending());if(e){diagnostic(9,e);return e;}
     unsigned capacity=remote_pending();if(capacity>4096)capacity=4096;if(!capacity)return 0;
-    unsigned bytes=0;e=qm_aac_read((uint8_t *)v.pcm,capacity,&bytes);if(e){diagnostic(1,e);return e;}if(!bytes)return 0;
+    unsigned bytes=0;e=h1_aac_read(&decoder,(uint8_t *)v.pcm,capacity,&bytes);if(e){diagnostic(1,e);return e;}if(!bytes)return 0;
     unsigned count=bytes/2;for(unsigned i=count;i-->0;)v.pcm[2*i]=v.pcm[2*i+1]=v.pcm[i];
     if(gba_audio_write(v.pcm,count)!=count){diagnostic(2,-1);return -1;}qm_play.pcm_bytes+=bytes;h1ns_audio_snapshot();
     if(!h1ns_audio_state[0]||h1ns_audio_state[5]||h1ns_audio_state[6]){diagnostic(3,-1);return -1;}position();return (int)bytes;
@@ -121,7 +124,7 @@ void qm_player_network_idle(void)
 }
 void qm_player_close(void)
 {
-    gba_audio_close();qm_aac_close();qm_net_stream_close();
+    gba_audio_close();if(decoder.state)h1_aac_close(&decoder);qm_net_stream_close();
     if(v.format)av_close_input_stream(v.format);av_free(v.io.buffer);free(v.cache[0]);free(v.cache[1]);
     memset(&v,0,sizeof v);v.ai=-1;memset(&qm_play,0,sizeof qm_play);
 }
@@ -136,8 +139,8 @@ int qm_player_open(const char *url)
     if(av_open_input_stream(&v.format,&v.io,"h1.m4a",&mov_demuxer,NULL)<0)goto fail;
     for(unsigned i=0;i<v.format->nb_streams;i++)if(v.format->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO&&v.format->streams[i]->codec->codec_id==CODEC_ID_AAC){v.ai=(int)i;break;}
     if(v.ai<0)goto fail;AVCodecContext *audio=v.format->streams[v.ai]->codec;
-    if(audio->channels<1||audio->channels>2||audio->extradata_size<=0||!qm_aac_open(audio->extradata,(unsigned)audio->extradata_size))goto fail;
-    if(!gba_audio_open(32768))goto fail;gba_audio_set_volume(35);h1ns_audio_clock_reset();qm_aac_set_progress(pump,NULL);
+    if(audio->channels<1||audio->channels>2||audio->extradata_size<=0||!decoder_open(audio->extradata,(unsigned)audio->extradata_size))goto fail;
+    if(!gba_audio_open(32768))goto fail;gba_audio_set_volume(35);h1ns_audio_clock_reset();h1_aac_set_progress(&decoder,pump,NULL);
     AVStream *stream=v.format->streams[v.ai];
     if(stream->duration>0&&stream->duration<(int64_t)INT64_MAX/1000){int64_t ms=av_rescale_q(stream->duration,stream->time_base,(AVRational){1,1000});if(ms>0&&ms<86400000)qm_play.duration=(unsigned)ms;}
     if(!qm_play.duration&&v.format->duration>0&&v.format->duration<86400ll*AV_TIME_BASE)qm_play.duration=(unsigned)(v.format->duration/1000);
@@ -158,7 +161,7 @@ void qm_player_step(void)
     int e=remote_level(!v.remote_known||remote_pending()<PCM_AHEAD_BYTES);if(e){diagnostic(9,e);goto fail;}
     if(v.prefilling&&(remote_pending()>=PCM_START_BYTES||v.finished)){v.prefilling=0;qm_buffer_diag[5]++;}
     e=pump(NULL);if(e<0)goto fail;
-    if(v.finished){e=qm_aac_eof();if(e<0){diagnostic(5,e);goto fail;}
+    if(v.finished){e=h1_aac_eof(&decoder);if(e<0){diagnostic(5,e);goto fail;}
         unsigned pending=h1ns_audio_pending();h1ns_audio_snapshot();
         /* V1.41 starts the persistent mixer ring after 4096 samples. A short
          * final/seek segment must be padded to that threshold so its real PCM
@@ -174,11 +177,11 @@ void qm_player_step(void)
     if(remote_pending()>=PCM_AHEAD_BYTES)return;
     AVPacket packet;av_init_packet(&packet);packet.data=NULL;packet.size=0;
     int r=av_read_frame(v.format,&packet);
-    if(r<0){if(qm_cancelled||v.io_error||r!=AVERROR_EOF){if(!qm_player_diag[2])diagnostic(6,r);goto fail;}int done=qm_aac_finish();if(done){diagnostic(8,done);goto fail;}v.finished=1;return;}
+    if(r<0){if(qm_cancelled||v.io_error||r!=AVERROR_EOF){if(!qm_player_diag[2])diagnostic(6,r);goto fail;}int done=h1_aac_finish(&decoder);if(done){diagnostic(8,done);goto fail;}v.finished=1;return;}
     if(packet.stream_index==v.ai){
         int64_t pts=packet.pts==(int64_t)AV_NOPTS_VALUE?(int64_t)v.base_ms:av_rescale_q(packet.pts,v.format->streams[v.ai]->time_base,(AVRational){1,1000});
         if(pts<0)pts=0;if(!v.anchor){v.anchor=1;v.origin_ms=v.anchor_ms=(uint32_t)pts;}
-        e=qm_aac_push(packet.data,(unsigned)packet.size,(uint32_t)pts);qm_play.packets++;
+        e=h1_aac_push(&decoder,packet.data,(unsigned)packet.size,(uint32_t)pts);qm_play.packets++;
     }
     av_free_packet(&packet);if(e<0){if(!qm_player_diag[2])diagnostic(7,e);goto fail;}return;
 fail:qm_play.error=1;qm_play.playing=0;gba_audio_pause();
@@ -188,7 +191,7 @@ int qm_player_seek(int seconds)
     if(!qm_play.ready||v.ai<0)return -1;int64_t target=(int64_t)qm_play.ms+(int64_t)seconds*1000;
     if(target<0)target=0;if(qm_play.duration&&target>=(int64_t)qm_play.duration)target=qm_play.duration>1000?qm_play.duration-1000:0;
     int playing=qm_play.playing;gba_audio_pause();qm_net_stream_close();
-    if(qm_aac_reset())return -1;
+    if(h1_aac_reset(&decoder))return -1;
     int64_t stamp=av_rescale_q(target,(AVRational){1,1000},v.format->streams[v.ai]->time_base);
     if(av_seek_frame(v.format,v.ai,stamp,AVSEEK_FLAG_BACKWARD)<0)return -1;
     v.finished=v.anchor=v.io_error=v.tail_padded=v.clock_seen=v.clock_recover=v.remote_known=0;v.prefilling=1;

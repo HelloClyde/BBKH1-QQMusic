@@ -8,7 +8,7 @@ from support import music as q
 import test_accounts as a
 from support import http_peer as pc
 
-ROOT=q.ROOT;OUT=ROOT/'build/qqmusic/navigation-0.1.12';OUT.mkdir(parents=True,exist_ok=True)
+ROOT=q.ROOT;OUT=ROOT/'build/qqmusic/navigation-0.1.13';OUT.mkdir(parents=True,exist_ok=True)
 def long_tone(path):
     container=q.av.open(str(path),'w',format='ipod');stream=container.add_stream('aac',rate=16000);stream.layout='mono';stream.bit_rate=48000
     total=45*16000

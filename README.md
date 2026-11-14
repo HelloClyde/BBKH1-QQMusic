@@ -7,22 +7,18 @@ H1管理界面、账号、歌词和M4A解复用，ESP32-S3提供通用Wi-Fi、HT
 ## 仓库结构
 
 ```text
-src/                 QQ音乐应用（首页、列表、账号、队列和播放器）
-  platform/          本应用使用的PCM、图片解码、AAC客户端、堆与libc边界
-  net/               USB传输调度，底层实现引用sdk
-  ui/                绘图形状和原生输入映射
-  runtime/           BDA入口、初始化与链接布局
-assets/              当前图标母版、字库源及许可
-sdk/                 固定版本的H1 SDK子模块
-third_party/         所需第三方库的源码和原始许可
+src/                 QQ音乐业务：页面、账号、队列、网络请求和播放调度
+assets/              当前图标母版和设计记录
+sdk/                 固定版本H1 SDK；图片/AAC/绘图/字库/PCM/运行库均在这里
+third_party/cjson/   音乐业务的JSON依赖（MIT）
 tests/               音乐测试；support为纯MIPS固件/HTTP/AAC边界模型
-tools/               构建、字库/图标生成、打包与仓库范围检查
+tools/               业务构建、图标生成、打包与仓库范围检查
 docs/                截图、验证边界和来源记录
 ```
 
 仓库只包含音乐程序及其依赖，不包含新闻、Bilibili、浏览器、Wi-Fi设置或H1Debug应用。
 USB驱动、固件适配和H1NET协议直接使用SDK内的通用组件；没有复制另一个应用目录来满足include。
-图片模块只解码JPEG/PNG，AAC模块直接调用本应用回调；测试也不导入其他应用的框架或硬件调试CLI。
+通用图片、AAC客户端、绘图、字库、PCM和媒体构建依赖统一调用SDK；src只保留业务和少量绑定。测试不导入其他应用的框架或硬件调试CLI。
 
 ## 快速开始
 
@@ -46,8 +42,9 @@ USB驱动、固件适配和H1NET协议直接使用SDK内的通用组件；没有
 
 顺序模式到本页末尾停止，单曲循环允许手动换歌，随机避免连续重复且保留上一首历史。
 自动切歌跳过明确无权限歌曲，网络错误停止并提示；扫码/登录不绕过上游播放权限。
-账号与授权逻辑在H1，凭据为`A:\QQMusic.auth0/1`，ESP不保存QQ音乐账号；勿公开分享凭据。
-模式在正常退出时保存到`A:\QQMusic.cfg`。歌曲、封面、歌词在运行时请求，不打包进仓库。
+账号与授权逻辑在H1，凭据为`A:\飞天音乐\QQMusic.auth0/1`，ESP不保存QQ音乐账号；勿公开分享凭据。
+程序自动创建配置目录，旧根目录凭据校验并写入新目录、读回验证后才清理旧文件；最新退出登录标记同样迁移，避免重新登录。新目录已有有效配置时优先使用。
+模式在正常退出时保存到`A:\飞天音乐\QQMusic.cfg`。歌曲、封面、歌词在运行时请求，不打包进仓库。
 
 ### 开发构建
 
@@ -68,13 +65,15 @@ python tools/package_release.py
 正式版`dist/H1QQMusic.bda`；`H1QQMusicDbg.bda`仅用于MIPS邮箱模型测试，不是H1Debug应用。
 `dist/release/`包含正式BDA、带“应用/程序”目录的安装ZIP、构建信息和SHA256SUMS。
 可设置`H1_GNU_BIN`复用相同版本工具链。构建使用相对路径、固定时间、稳定归档顺序；
-图标母版、字库HEX及生成器齐全，不依赖系统商业字体或在线图片服务。
+图标母版齐全，SDK内保留字库HEX及生成器，不依赖系统商业字体或在线图片服务。
 
 ```powershell
 python -m pip install -r requirements-test.txt
 python tests/test_modes.py
 python tests/test_buffer.py
 python tests/test_navigation.py
+python tests/test_accounts.py
+python tests/test_storage.py
 ```
 
 另外`python tests/test_stream.py`验证真实C协议/分段预取，需`HOST_CC`或PATH中的gcc。
@@ -84,7 +83,7 @@ python tests/test_navigation.py
 
 ![H1首页](docs/screenshots/hardware-home.png)
 
-物理H1的旧0.1.11安装观察截图，在USB交接前采集；不作为0.1.12的实体联网/试听证明。
+物理H1的旧0.1.11安装观察截图，在USB交接前采集；不作为0.1.13的实体联网/试听证明。
 
 ![模型播放页](docs/screenshots/model-player.png)
 ![模型列表](docs/screenshots/model-list.png)
@@ -94,10 +93,10 @@ python tests/test_navigation.py
 ## 依赖
 
 成品：H1/Y100 **V1.41**、带PSRAM的ESP32-S3、通用固件0.4.4、数据OTG和独立电源。
-SDK子模块固定 **`63fa3c825feae5d9a1fa04572458fd5a5dbe847b`**，
+SDK子模块固定 **`259c11f31fb31343b8a08e046037d89934ee1132`**，
 来自[HelloClyde/bbk-h1-bda-sdk](https://github.com/HelloClyde/bbk-h1-bda-sdk)。
 本次明确改为复用已公开的SDK通用USB/协议组件，避免复制其他应用的驱动目录。
-板卡选型、J-OTG/供电/Type-C CC、固件与Wi-Fi样例见[SDK文档](https://github.com/HelloClyde/bbk-h1-bda-sdk/blob/63fa3c825feae5d9a1fa04572458fd5a5dbe847b/docs/esp32.md)。
+板卡选型、J-OTG/供电/Type-C CC、固件与Wi-Fi样例见[SDK文档](https://github.com/HelloClyde/bbk-h1-bda-sdk/blob/259c11f31fb31343b8a08e046037d89934ee1132/docs/esp32.md)。
 
 其余为FFmpeg0.6.7（MOV解复用）、musl1.2.5、TLSF3.1、cJSON、libpng1.6.43、
 zlib1.3.1、IJG JPEG9f、GNU Unifont16.0.04。源码、许可和来源见[THIRD_PARTY.md](THIRD_PARTY.md)。
@@ -105,7 +104,7 @@ Python依赖固定在requirements文件；Unicorn/PyAV只供测试，不是成�
 
 ## 验证与限制
 
-见[验证边界](docs/VERIFICATION.md)。0.1.12整理仓库依赖和测试结构，未新增播放功能。
+见[验证边界](docs/VERIFICATION.md)。0.1.13把通用媒体模块移入SDK，配置迁移至A:\飞天音乐。此次版本尚未在实体H1安装验收。
 近期约90秒短停改动、自动下一首/四模式仍待最终实体试听，不以模型通过代替物理听感。
 上游接口/地区/歌曲权限可能影响可用性；支持C400标准M4A/AAC，不含个人歌单/收藏写入、无损、MV或QRC逐字歌词。
 QQ/微信均有扫码流程，尚未把一次手机方式反馈扩大为两种方式全部完成实体验收。

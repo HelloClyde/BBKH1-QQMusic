@@ -47,6 +47,10 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python tests/test_navigation.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tests/test_accounts.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tests/test_storage.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package the same checked build
         run: python tools/package_release.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

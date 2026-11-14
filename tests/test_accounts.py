@@ -10,7 +10,8 @@ from support.mailbox import MailboxBridge
 from support import http_peer as pc
 
 ROOT=q.ROOT;OUT=ROOT/'build/qqmusic/accounts-0.1.9';OUT.mkdir(parents=True,exist_ok=True)
-PATHS=('A:\\QQMusic.auth0','A:\\QQMusic.auth1')
+PATHS=('A:\\飞天音乐\\QQMusic.auth0','A:\\飞天音乐\\QQMusic.auth1')
+LEGACY=('A:\\QQMusic.auth0','A:\\QQMusic.auth1')
 
 class Fixture(q.Fixture):
     def __init__(self):
@@ -75,13 +76,13 @@ class Backend(q.Backend):
 
 class Model(q.Model):
     def __init__(self):
-        self.fail_write=False;super().__init__();self.install(0x80030000,0x24,0x80e20100,'remove')
+        self.fail_write=getattr(self,"fail_initial",False);super().__init__();self.install(0x80030000,0x24,0x80e20100,'remove')
     def hook(self,kind):
         if kind not in ('remove','fwrite'):return super().hook(kind)
         normal=super().hook(kind) if kind=='fwrite' else None
         def run(u,address,size,data):
             if kind=='remove':
-                name=self.cstring(u.reg_read(UC_MIPS_REG_A0),'gbk');assert name in PATHS;self.files.pop(name,None);value=0
+                name=self.cstring(u.reg_read(UC_MIPS_REG_A0),'gbk');assert name in self.owned_paths;self.files.pop(name,None);value=0
             elif self.fail_write:value=0
             else:return normal(u,address,size,data)
             u.reg_write(UC_MIPS_REG_V0,value);u.reg_write(UC_MIPS_REG_PC,u.reg_read(UC_MIPS_REG_RA))
@@ -100,7 +101,7 @@ class Harness(q.Harness):
     def close(self):
         self.m.allow_exit=True;self.m.keys.extend([24,24]);self.until(lambda:self.m.pc==self.m.stop)
         assert not self.m.drawing and not self.m.allocations and not self.m.invalid and not self.m.handles
-        assert all(c['path'] in PATHS or c['path']=='A:\\QQMusic.cfg' for c in self.m.file_calls)
+        assert all(c['path'] in self.m.owned_paths for c in self.m.file_calls)
         self.backend.close();self.audio.close()
 
 def main():
@@ -111,8 +112,8 @@ def main():
         assert m.state()['count']==0 and not m.word('inputs');m.screenshot('01-connected.png');passed('automatic HELLO/CAPS/STATUS detects connected Wi-Fi before any key')
         h.key(13);m.screenshot('02-japanese.png')
         # Confirm every requested character resolves to a non-fallback native glyph.
-        count=json.loads((ROOT/'assets/font.json').read_text())['glyphs']
-        codes=list(struct.unpack('<%uH'%count,m.get(m.symbols['qm_font_cp'],count*2)))
+        count=json.loads((ROOT/'sdk/sdk/media/fonts/font.json').read_text())['glyphs']
+        codes=list(struct.unpack('<%uH'%count,m.get(m.symbols['h1_font_cp'],count*2)))
         assert all(ord(c) in codes for c in '夜に駆けるありがとうｶﾀｶﾅ日本語')
         h.key(8,1);h.until(lambda:m.account()['state']==3);m.screenshot('03-qq-scan.png');assert m.word('qm_account_qr_width')==132
         fixture.confirm=True;h.until(lambda:m.account()['logged']==1);assert m.account()['kind']==2

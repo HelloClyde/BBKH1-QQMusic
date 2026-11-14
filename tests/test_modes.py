@@ -8,9 +8,9 @@ from support import music as q
 from support.audio_injection import TimedModel
 from support import http_peer as pc
 ROOT = q.ROOT
-OUT = ROOT / 'build/qqmusic/modes-0.1.12'
+OUT = ROOT / 'build/qqmusic/modes-0.1.13'
 OUT.mkdir(parents=True, exist_ok=True)
-CFG = 'A:\\QQMusic.cfg'
+CFG = 'A:\\飞天音乐\\QQMusic.cfg'
 seconds = 1
 
 def tone(path):
@@ -59,7 +59,7 @@ class Harness(q.Harness):
                 break
         self.m.allow_exit = True
         assert self.m.pc == self.m.stop and (not self.m.drawing) and (not self.m.allocations) and (not self.m.handles) and (not self.m.invalid)
-        assert all((c['path'] in ('A:\\QQMusic.auth0', 'A:\\QQMusic.auth1', CFG) for c in self.m.file_calls))
+        assert all((c['path'] in self.m.owned_paths for c in self.m.file_calls))
         assert all((c['mode'] == 'rb' or (c['path'] == CFG and c['mode'] == 'wb') for c in self.m.file_calls))
         self.backend.close()
         self.audio.close()

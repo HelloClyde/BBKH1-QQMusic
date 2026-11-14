@@ -58,12 +58,20 @@ class FirmwareBase:
 
 class FileServices(FirmwareBase):
     def hook(self, kind):
-        if kind not in ('fopen', 'fclose', 'fread', 'fwrite', 'fseek', 'ftell', 'buffer', 'blit', 'present'):
+        if kind not in ('fopen', 'fclose', 'fread', 'fwrite', 'fseek', 'ftell', 'mkdir', 'remove', 'buffer', 'blit', 'present'):
             return super().hook(kind)
         def run(u, address, size, unused):
             args = [u.reg_read(reg) for reg in (UC_MIPS_REG_A0, UC_MIPS_REG_A1, UC_MIPS_REG_A2, UC_MIPS_REG_A3)]
             value = 0
-            if kind == 'buffer':
+            if kind=='mkdir':
+                path=self.cstring(args[0],'gbk');assert path=='A:\\飞天音乐'
+                self.mkdir_calls.append(path)
+                if self.fail_mkdir:value=-1
+                else:self.directories.add(path)
+            elif kind=='remove':
+                path=self.cstring(args[0],'gbk');assert path in self.owned_paths
+                self.files.pop(path,None)
+            elif kind == 'buffer':
                 assert self.drawing
                 self.put(args[0], struct.pack('<6H', 0, 480, 272, 1920, 0, 32))
                 self.frames += 1; self.native_buffer_calls += 1; value = self.fb
@@ -75,7 +83,9 @@ class FileServices(FirmwareBase):
             elif kind == 'fopen':
                 path, mode = self.cstring(args[0], 'gbk'), self.cstring(args[1])
                 self.file_calls.append({'path': path, 'mode': mode})
-                if path in self.files or 'w' in mode:
+                parent=path.rsplit('\\',1)[0]
+                exists=parent in self.directories or any(p.startswith(parent+'\\') for p in self.files)
+                if exists and (path in self.files or 'w' in mode):
                     value = self.next_handle; self.next_handle += 1
                     self.handles[value] = (path, mode, io.BytesIO(b'' if 'w' in mode else self.files[path]))
             elif kind == 'fclose':
@@ -101,6 +111,8 @@ class FirmwareModel(FileServices):
         self.allocations={};self.blocks=[(0x81400000,16*1024*1024)];self.minimum_stack=0xffffffff
         self.files={};self.handles={};self.next_handle=1;self.file_calls=[];self.invalid=None;self.budget=0
         self.native_buffer_calls=self.blit_calls=0
+        self.directories={'A:'};self.mkdir_calls=[];self.fail_mkdir=False
+        self.owned_paths={prefix+name for prefix in ('A:\\','A:\\飞天音乐\\') for name in ('QQMusic.cfg','QQMusic.auth0','QQMusic.auth1')}
         with elf_path.open('rb') as stream:
             elf=ELFFile(stream)
             for segment in elf.iter_segments():
@@ -122,6 +134,8 @@ class FirmwareModel(FileServices):
         for i,(offset,kind) in enumerate(((8,'alloc'),(12,'free'))):self.install(memory,offset,0x80e10000+i*16,kind)
         files=0x80030000;self.put(0x83c00008,struct.pack('<I',files))
         for i,kind in enumerate(('fopen','fclose','fread','fwrite','fseek','ftell')):self.install(files,i*4,0x80e20000+i*16,kind)
+        self.install(files,0x24,0x80e20100,'remove')
+        self.install(files,0x30,0x80e20120,'mkdir');self.put(0x80e20120,struct.pack('<3I',0x27bdffd8,0x03e00008,0))
         for symbol,kind in (('fw_matches','fw'),('fw_delay','delay')):
             self.u.hook_add(UC_HOOK_CODE,self.hook(kind),begin=self.symbols[symbol],end=self.symbols[symbol])
         def invalid(u,access,address,size,value,data):self.invalid=[access,hex(address),size,hex(value)];return False

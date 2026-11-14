@@ -7,7 +7,7 @@ def main():
     cc=os.environ.get('HOST_CC') or shutil.which('gcc') or shutil.which('cc');assert cc,'Set HOST_CC to a host C compiler';exe=out/('stream.exe' if os.name=='nt' else 'stream')
     sources=[ROOT/x for x in ('tests/stream.c','src/network.c','sdk/sdk/esp32/common/h1net_wire.c','sdk/sdk/esp32/common/h1net_client.c','sdk/sdk/esp32/common/h1net_server.c')]
     command=[str(cc),'-std=c99','-O2','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror','-Wno-misleading-indentation','-Wno-int-to-pointer-cast','-Wno-pointer-to-int-cast','-Wl,--gc-sections']
-    for path in ('src','sdk/sdk/esp32/common','src/net','sdk/sdk/include'):command+=['-I',str(ROOT/path)]
+    for path in ('src','sdk/sdk/esp32/common','sdk/sdk/media/target','sdk/sdk/include'):command+=['-I',str(ROOT/path)]
     r=subprocess.run([*command,*map(str,sources),'-o',str(exe)],capture_output=True,text=True)
     (out/'build.log').write_text(r.stdout+r.stderr,encoding='utf-8');r.check_returncode()
     r=subprocess.run([str(exe),'1'],capture_output=True,text=True,timeout=30)

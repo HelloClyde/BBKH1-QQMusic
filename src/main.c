@@ -2,24 +2,24 @@
 #include "h1_sdk.h"
 #include "firmware.h"
 #include "transport.h"
-#include "platform.h"
+#include "h1_media_runtime.h"
 #include "app.h"
 #include "queue.h"
-#include "platform/images.h"
-#include "platform/touch.h"
-#include "platform/audio.h"
+#include "h1_image.h"
+#include "h1_touch.h"
+#include "h1_media_audio.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <setjmp.h>
-#include "font.h"
-#include "ui/drawing.h"
-#include "ui/style.h"
+#include "render.h"
+#include "storage.h"
+#include "h1_text_input.h"
 #undef UI_BLUE
 #undef UI_TINT
 #define UI_BLUE UI_RGB(0x0c8b62)
 #define UI_TINT UI_RGB(0xe5f5ec)
-#include "native_input.h"
+int qm_native_input_raw(char *s,unsigned n){return h1_input_text(s,n,"QQ\xd2\xf4\xc0\xd6");}
 volatile uint32_t qm_state[24]={0x31514d48u,1};
 /* An observing deployment host can retain its session until its snapshot is
  * complete. It clears this application-owned flag before normal USB handoff. */
@@ -91,7 +91,7 @@ static void collect(void)
         int code=-1,key=-1;h1_event_fetch(&code,&key);if(code==-1)break;
         if(code==H1_EVENT_KEY_DOWN){pen_active=0;queue_key(key);continue;}
         if(code!=11&&code!=12&&code!=8)continue;
-        int x,y,valid=h1_touch_position(&x,&y);
+        h1_u16 x,y;int valid=h1_touch_position(&x,&y);
         if(code==11&&valid){
             pen_active=1;pen_drag=0;pen_key=touch_key(x,y);
             pen_list=!view&&x>=137&&y>=67&&y<235;
@@ -104,7 +104,7 @@ static void collect(void)
         }
     }
     if(pen_active&&pen_list&&qm_time()-pen_sample>=16u){
-        int x,y;pen_sample=qm_time();
+        h1_u16 x,y;pen_sample=qm_time();
         if(h1_touch_position(&x,&y))pen_move(x,y);
     }
 }
@@ -132,7 +132,7 @@ static int play_queued(int background)
 {
     if(queue_index>=play_queue.count)return -1;qm_track candidate=play_queue.tracks[queue_index];int outcome=0;
     if((candidate.paid&QM_RIGHTS_MASK)==QM_RIGHTS_MEMBER&&!qm_account.logged){message("该歌曲需要账号授权，请在账号页登录");qm_paint();return 1;}
-    end_handled=0;qm_player_close();free(cover);cover=NULL;cover_w=cover_h=0;memset(&qm_words,0,sizeof qm_words);qm_current=candidate;if(!background)view=1;start_busy("正在取得歌曲播放地址…");
+    end_handled=0;qm_player_close();h1_image_free(cover);cover=NULL;cover_w=cover_h=0;memset(&qm_words,0,sizeof qm_words);qm_current=candidate;if(!background)view=1;start_busy("正在取得歌曲播放地址…");
     char body[640],url[401],media[401],*data=NULL;size_t length=0;int e=qm_vkey_body(&qm_current,qm_time()+1000000000u,body);
     if(e<0)goto done;e=qm_net_fetch("https://u.y.qq.com/cgi-bin/musicu.fcg","POST",body,64*1024,&data,&length);
     if(e)goto done;char error[128];e=qm_parse_url(data,length,qm_current.mid,media,error);free(data);data=NULL;if(e){
@@ -143,7 +143,7 @@ static int play_queued(int background)
     snprintf(url,sizeof url,"https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?format=json&nobase64=1&g_tk=5381&songmid=%s",qm_current.mid);
     if(!qm_net_fetch(url,"GET",NULL,64*1024,&data,&length)){(void)qm_parse_lyrics(data,length,&qm_words);free(data);data=NULL;}
     if(qm_cancelled){e=-6;goto done;}
-    if(!qm_cover_url(&qm_current,url)&&!qm_net_fetch(url,"GET",NULL,256*1024,&data,&length)){(void)qm_image_decode((uint8_t *)data,(unsigned)length,&cover,&cover_w,&cover_h,148,148);free(data);data=NULL;}
+    if(!qm_cover_url(&qm_current,url)&&!qm_net_fetch(url,"GET",NULL,256*1024,&data,&length)){(void)h1_image_decode_rgb565((uint8_t *)data,(unsigned)length,&cover,&cover_w,&cover_h,148,148);free(data);data=NULL;}
     if(qm_cancelled){e=-6;goto done;}message("正在缓冲M4A音频…");qm_paint();e=qm_player_open(media);
     if(!e){
         qm_current.paid|=QM_RIGHTS_PLAYABLE;play_queue.tracks[queue_index].paid|=QM_RIGHTS_PLAYABLE;
@@ -173,16 +173,25 @@ static void advance_queue(int action)
     if(action!=QM_QUEUE_ENDED&&old==queue_index)ui_dirty=1;
     qm_paint();
 }
+static int mode_read(const char *path,unsigned *mode)
+{
+    uint8_t b[16];h1_file *f=h1_fopen(path,"rb");if(!f)return 0;
+    unsigned n=h1_fread(b,1,sizeof b,f);int closed=h1_fclose(f)==0;
+    if(!closed||n!=16||h1net_u32(b)!=0x31434d51u||h1net_u32(b+4)!=1||
+        h1net_u32(b+8)>=QM_PLAY_MODES||h1net_u32(b+12)!=h1net_crc32(b,12))return 0;
+    *mode=h1net_u32(b+8);return 1;
+}
 static void mode_load(void)
 {
-    uint8_t b[16];h1_file *f=h1_fopen("A:\\QQMusic.cfg","rb");if(!f)return;
-    unsigned n=h1_fread(b,1,sizeof b,f);h1_fclose(f);
-    if(n==16&&h1net_u32(b)==0x31434d51u&&h1net_u32(b+4)==1&&h1net_u32(b+8)<QM_PLAY_MODES&&h1net_u32(b+12)==h1net_crc32(b,12))play_mode=h1net_u32(b+8);
+    qm_storage_init();
+    if(!mode_read(QM_MODE_PATH,&play_mode)&&mode_read(QM_LEGACY_MODE,&play_mode))mode_dirty=1;
 }
 static void mode_save(void)
 {
     if(!mode_dirty)return;uint8_t b[16];h1net_put32(b,0x31434d51u);h1net_put32(b+4,1);h1net_put32(b+8,play_mode);h1net_put32(b+12,h1net_crc32(b,12));
-    h1_file *f=h1_fopen("A:\\QQMusic.cfg","wb");if(f){(void)h1_fwrite(b,1,sizeof b,f);h1_fclose(f);}
+    h1_file *f=h1_fopen(QM_MODE_PATH,"wb");if(!f)return;
+    int ok=h1_fwrite(b,1,sizeof b,f)==sizeof b,closed=h1_fclose(f)==0;unsigned check;
+    if(ok&&closed&&mode_read(QM_MODE_PATH,&check)&&check==play_mode){mode_dirty=0;(void)h1_remove(QM_LEGACY_MODE);}
 }
 static void invalidate_rights(void)
 {
@@ -296,5 +305,5 @@ int h1_app_main(void)
             if(ui_dirty||(view==QM_VIEW_PLAYER&&qm_play.ms!=last_ms&&qm_time()-last_paint>=150)){last_ms=qm_play.ms;qm_paint();}if(!qm_play.playing)fw_delay(1);
         }
     }
-    qm_account_close();qm_player_close();if(!panic_code)mode_save();free(cover);cover=NULL;if(open_ok)qm_net_close();h1ns_io_release();h1ns_heap_release();h1_timer_stop();context_close();publish();return panic_code;
+    qm_account_close();qm_player_close();if(!panic_code)mode_save();h1_image_free(cover);cover=NULL;if(open_ok)qm_net_close();h1ns_io_release();h1ns_heap_release();h1_timer_stop();context_close();publish();return panic_code;
 }

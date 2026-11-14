@@ -3,7 +3,8 @@
 #include "app.h"
 #include "h1_sdk.h"
 #include "h1net_wire.h"
-#include "platform/images.h"
+#include "h1_image.h"
+#include "storage.h"
 #include "../third_party/cjson/cJSON.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -231,8 +232,8 @@ static int publish_qr(uint32_t id,auth_reply *r)
 {
     if(!current(id)||!r||r->status!=200||!r->used||r->used>QR_LIMIT)return 0;
     uint16_t *image=NULL;unsigned w=0,h=0;
-    if(qm_image_decode(r->body,r->used,&image,&w,&h,184,184))return 0;
-    free(qm_account_qr);qm_account_qr=image;qm_account_qr_width=w;qm_account_qr_height=h;
+    if(h1_image_decode_rgb565(r->body,r->used,&image,&w,&h,184,184))return 0;
+    h1_image_free(qm_account_qr);qm_account_qr=image;qm_account_qr_width=w;qm_account_qr_height=h;
     state=AUTH_SCAN;snprintf(message,sizeof message,"请用%s扫码，再在手机上确认",kind==1?"微信":"QQ");return 1;
 }
 static int get_qq_qr(uint32_t id,char identifier[256])
@@ -337,10 +338,10 @@ static int restore(uint32_t id)
  * A zero-length newest generation is a durable logout tombstone. */
 static uint32_t generation;
 static unsigned slot;
-static void path(unsigned index,char out[40]){snprintf(out,40,"A:\\QQMusic.auth%u",index);}
-static char *read_slot(unsigned index,uint32_t *gen,int *valid)
+static void path(unsigned index,char out[64]){qm_auth_path(index,0,out);}
+static char *read_slot_at(unsigned index,int legacy,uint32_t *gen,int *valid)
 {
-    char name[40];path(index,name);h1_file *file=h1_fopen(name,"rb");*valid=0;if(!file)return NULL;
+    char name[64];qm_auth_path(index,legacy,name);h1_file *file=h1_fopen(name,"rb");*valid=0;if(!file)return NULL;
     uint8_t header[24];char *text=NULL;
     if(h1_fread(header,1,24,file)==24&&h1net_u32(header)==0x31414d51u&&h1net_u32(header+4)==1&&
         h1net_u32(header+20)==h1net_crc32(header,20)){
@@ -351,9 +352,13 @@ static char *read_slot(unsigned index,uint32_t *gen,int *valid)
     }
     h1_fclose(file);return text;
 }
+static char *read_slot(unsigned index,uint32_t *gen,int *valid)
+{return read_slot_at(index,0,gen,valid);}
+static void remove_legacy(void)
+{for(unsigned i=0;i<2;i++){char name[64];qm_auth_path(i,1,name);(void)h1_remove(name);}}
 static int store(const char *text)
 {
-    unsigned n=text?(unsigned)strlen(text):0,index=slot^1;uint8_t header[24];char name[40];path(index,name);
+    unsigned n=text?(unsigned)strlen(text):0,index=slot^1;uint8_t header[24];char name[64];path(index,name);
     h1net_put32(header,0x31414d51u);h1net_put32(header+4,1);h1net_put32(header+8,generation+1);
     h1net_put32(header+12,n);h1net_put32(header+16,h1net_crc32(text,n));h1net_put32(header+20,h1net_crc32(header,20));
     h1_file *file=h1_fopen(name,"wb");if(!file)return 0;
@@ -361,29 +366,37 @@ static int store(const char *text)
     uint32_t gen=0;int valid=0;char *check=read_slot(index,&gen,&valid);
     ok=ok&&closed&&valid&&gen==generation+1&&check&&strlen(check)==n&&(!n||!memcmp(check,text,n));
     if(check)erase_free(check,(unsigned)strlen(check));
-    if(ok){generation++;slot=index;}return ok;
+    if(ok){generation++;slot=index;remove_legacy();}return ok;
 }
 void qm_account_init(void)
 {
-    if(loaded)return;loaded=1;uint32_t gens[2]={0};int valid[2]={0};char *values[2];
+    if(loaded)return;loaded=1;qm_storage_init();uint32_t gens[2]={0};int valid[2]={0},legacy=0;char *values[2];
     values[0]=read_slot(0,&gens[0],&valid[0]);values[1]=read_slot(1,&gens[1],&valid[1]);
+    if(!valid[0]&&!valid[1]){
+        for(unsigned i=0;i<2;i++){if(values[i])erase_free(values[i],(unsigned)strlen(values[i]));values[i]=read_slot_at(i,1,&gens[i],&valid[i]);}
+        legacy=1;
+    }
     if(valid[0]||valid[1]){slot=valid[1]&&(!valid[0]||(int32_t)(gens[1]-gens[0])>0)?1:0;generation=gens[slot];
-        if(values[slot]&&*values[slot]){cJSON *data=cJSON_Parse(values[slot]);char cookie[1024],uin[32];
-            if(data&&credential_cookie(data,cookie,uin)){credential=values[slot];values[slot]=NULL;state=AUTH_RESTORE;kind=login_type(data);snprintf(message,sizeof message,"正在恢复登录状态");}
+        unsigned chosen=slot;
+        /* Copy the newest validated generation, including logout tombstones.
+           Never delete legacy credentials until new write/readback succeeds. */
+        if(legacy)(void)store(values[chosen]);
+        if(values[chosen]&&*values[chosen]){cJSON *data=cJSON_Parse(values[chosen]);char cookie[1024],uin[32];
+            if(data&&credential_cookie(data,cookie,uin)){credential=values[chosen];values[chosen]=NULL;state=AUTH_RESTORE;kind=login_type(data);snprintf(message,sizeof message,"正在恢复登录状态");}
             h1net_secure_clear(cookie,sizeof cookie);cJSON_Delete(data);}}
     for(unsigned i=0;i<2;i++)if(values[i])erase_free(values[i],(unsigned)strlen(values[i]));
 }
 void qm_account_begin(unsigned type)
 {
     session++;kind=type;state=AUTH_FETCHING;error_code=0;pending=1;cancelled=0;next_poll=0;
-    free(qm_account_qr);qm_account_qr=NULL;qm_account_qr_width=qm_account_qr_height=0;
+    h1_image_free(qm_account_qr);qm_account_qr=NULL;qm_account_qr_width=qm_account_qr_height=0;
     snprintf(message,sizeof message,"正在获取%s二维码",type==1?"微信":"QQ");
 }
 void qm_account_cancel(void)
 {
     session++;pending=0;cancelled=0;h1net_secure_clear(login_identifier,sizeof login_identifier);
     if(state==AUTH_FETCHING||state==AUTH_SCAN||state==AUTH_CONFIRM){state=logged?AUTH_DONE:credential?AUTH_RESTORE:AUTH_IDLE;snprintf(message,sizeof message,"已取消扫码");}
-    free(qm_account_qr);qm_account_qr=NULL;qm_account_qr_width=qm_account_qr_height=0;
+    h1_image_free(qm_account_qr);qm_account_qr=NULL;qm_account_qr_width=qm_account_qr_height=0;
 }
 void qm_account_close(void)
 {qm_account_cancel();if(credential){erase_free(credential,(unsigned)strlen(credential));credential=NULL;}}
@@ -393,7 +406,7 @@ int qm_account_logout(void)
     qm_account_cancel();if(credential){erase_free(credential,(unsigned)strlen(credential));credential=NULL;}
     logged=0;state=AUTH_IDLE;nickname[0]=0;error_code=0;qm_account_revision++;snprintf(message,sizeof message,"已退出登录");
     /* Tombstone is already verified; remove the older account copy. */
-    char name[40];path(slot^1,name);h1_remove(name);return 1;
+    char name[64];path(slot^1,name);h1_remove(name);return 1;
 }
 void qm_account_step(int visible)
 {
