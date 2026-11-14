@@ -1,0 +1,95 @@
+name: QQMusic build, MIPS checks and preview release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: '1'
+      SOURCE_DATE_EPOCH: '1794614400'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-test.txt
+      - name: Install dependencies and SHA-pinned GNU toolchain
+        run: |
+          python -m pip install -r requirements-test.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tools/install_gnu_toolchain.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "H1_GNU_BIN=$((Resolve-Path .tools/toolchain/bin).Path)" >> $env:GITHUB_ENV
+      - name: Build exact native and model BDA
+        run: python tools/build_h1_qqmusic.py --all
+      - name: Actual linked MIPS queue, UI and buffering checks
+        run: |
+          python tools/test_h1_qqmusic_modes.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tools/test_h1_qqmusic_buffer.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tools/test_h1_qqmusic_navigation.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package the same checked build
+        run: python tools/package_release.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: QQMusic-release
+          path: dist/release/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: QQMusic-model-evidence
+          path: |
+            build/h1-qqmusic/*/report.json
+            build/h1-qqmusic/*/*.png
+          if-no-files-found: warn
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: QQMusic-release
+          path: release-assets
+      - name: Verify assets and publish a preview (never overwrite an existing release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $expectedTag = 'v' + (Get-Content VERSION -Raw).Trim()
+          if ($env:RELEASE_TAG -ne $expectedTag) { throw 'Tag/version mismatch' }
+          foreach ($line in Get-Content release-assets/SHA256SUMS.txt) {
+            $parts = $line -split '  ', 2
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path release-assets $parts[1])).Hash.ToLowerInvariant()
+            if ($actual -ne $parts[0]) { throw 'Asset digest mismatch' }
+          }
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) { throw 'Release already exists; refusing overwrite' }
+          gh release create $env:RELEASE_TAG --verify-tag --prerelease --title "QQ音乐 $env:RELEASE_TAG 预览版" --notes-file RELEASE_NOTES.md release-assets/*
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

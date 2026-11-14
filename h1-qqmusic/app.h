@@ -1,0 +1,51 @@
+#ifndef H1_QM_APP_H
+#define H1_QM_APP_H
+#include "core.h"
+extern volatile uint32_t qm_state[24];
+extern char qm_notice[160];
+extern int qm_cancelled;
+uint32_t qm_time(void);
+void qm_idle(void *);
+void qm_paint(void);
+int qm_net_open(void);
+void qm_net_close(void);
+void qm_net_reset(void);
+enum {QM_DEVICE_WAIT,QM_DEVICE_CHECKING,QM_WIFI_OFFLINE,QM_NETWORK_READY,QM_DEVICE_ERROR};
+extern unsigned qm_connection_status;
+void qm_net_probe_step(int idle);
+int qm_net_probe_active(void);
+int qm_net_request(const char *,const char *,const char *,const char *,unsigned,unsigned,char **,unsigned *,char **,unsigned *);
+enum {QM_AUTH_IDLE,QM_AUTH_FETCHING,QM_AUTH_SCAN,QM_AUTH_CONFIRM,QM_AUTH_DONE,QM_AUTH_EXPIRED,QM_AUTH_ERROR,QM_AUTH_RESTORE};
+typedef struct {unsigned state,kind,logged,error;char nickname[96],message[128];} qm_account_state;
+extern qm_account_state qm_account;
+extern unsigned qm_account_revision;
+extern uint16_t *qm_account_qr;
+extern unsigned qm_account_qr_width,qm_account_qr_height;
+void qm_account_init(void);
+void qm_account_close(void);
+void qm_account_begin(unsigned);
+void qm_account_step(int);
+void qm_account_cancel(void);
+int qm_account_logout(void);
+int qm_account_authorize(const char *,const char *,const void *,unsigned,char **,char **,unsigned *);
+int qm_net_fetch(const char *,const char *,const char *,unsigned,char **,size_t *);
+int qm_net_size(const char *,uint32_t *);
+int qm_net_stream(const char *,uint32_t,uint32_t,uint32_t,uint8_t *);
+void qm_net_stream_close(void);
+uint32_t qm_net_features(void);
+int qm_net_compute_rpc(unsigned,const void *,unsigned,void *,unsigned,unsigned *);
+typedef struct {unsigned ready,playing,eof,error,ms,duration,packets,pcm_bytes;} qm_player_state;
+extern qm_player_state qm_play;
+extern volatile uint32_t qm_player_diag[16];
+extern volatile uint32_t qm_stream_diag[16];
+extern volatile uint32_t qm_buffer_diag[16];
+int qm_player_buffering(void);
+int qm_player_open(const char *);
+void qm_player_close(void);
+void qm_player_step(void);
+void qm_player_network_idle(void);
+void qm_player_toggle(void);
+int qm_player_seek(int);
+void qm_player_before_input(void);
+int qm_player_after_input(void);
+#endif

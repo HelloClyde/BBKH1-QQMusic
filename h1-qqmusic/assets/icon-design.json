@@ -1,0 +1,9 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "transparent_background": true,
+  "reference": "qqmusic-reference.png",
+  "reference_origin": "TMC web/public/icon/QQMUSIC_LOGO.ico; https://y.qq.com/favicon.ico",
+  "master": "icon-h1-qq-v2.png",
+  "sha256": "5942a32eeed6bb88edc0f22efcada91140cb0fea9ebcd5888e89e32ef039208d",
+  "prompt": "Design one small application icon for a vintage BBK H1 handheld device, based closely on the supplied QQ Music official favicon reference. The reference is the brand-shape reference: preserve its distinctive bright yellow circular badge and SINGLE green stylized musical-note silhouette with a round lower head and sweeping tilted upper stem. Make the same recognizable symbol into a refined early-2000s handheld menu icon: shallow raised plastic, a very restrained curved highlight, gentle bevel on the circular yellow edge, clean rich green note, crisp thick shapes readable at 45 by 45 pixels. The yellow circular badge fills about 87 percent of a square canvas. Straight-on orthographic view, perfectly centered, no perspective tilt. Transparent outside the round badge; no square tile or colored background. No text, letters, H1 label, watermark, border decoration, extra notes, headphones, gear, or invented details. This is an icon for a non-official QQ Music client on H1, not a product advertising graphic. Generate a high-resolution square master with a true alpha channel, keeping negative spaces and silhouette faithful to the supplied reference."
+}

@@ -1,0 +1,15 @@
+{
+  "reference": "Tesla Media Center",
+  "repository": "https://github.com/HelloClyde/tesla-media-center",
+  "revision": "9d7cb51cf5ddf3e02fa8d6e1c129168d11af4aae",
+  "purpose": "reference browse/permission/queue/LRC behavior; no Flask/Vue dependency or account store copied",
+  "library": "qqmusic-api-python==0.7.3 (TMC only, not required by H1)",
+  "source_sha256": {
+    "ffvideo/qqmusic.py": "7d4620695fe054adbd603b5b9d2b8f2450f125917f293459b9365309229208d7",
+    "web/src/views/apps/qqMusicLyrics.ts": "5fd93b0731b2c5fab279001cd3e7b5e4920a45e4a9ecca0029dd46cca507c8d6",
+    "web/src/views/apps/qqMusicQueue.ts": "74c1d52ed0841a3dbb23695223d5651326aaa52d728d8823e5596dc0d271b8e0",
+    "docs/qqmusic.md": "e647864514f5a9fbe04e9e7e851b29e10af51ca32fbac35bb8ef52ef1c8e5ae4",
+    "requirement.txt": "e8f5f94416e07a5b9dda20d43af2e3b9f2dbcbc3c9de633fc021595fb0954dcd"
+  },
+  "credentials_read": false
+}

@@ -1,0 +1,34 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "transparent_background": true,
+  "master": "icon-h1-native-v3.png",
+  "intent": "QQ Music黄绿单音符标志；参照H1原机圆角方形图标；用户明确不要耳机",
+  "references": [
+    {
+      "path": "docs/evidence/h1-debug-hardware-menu.png",
+      "role": "原机桌面风格：圆角方形、浅色上沿与水平层次"
+    },
+    {
+      "path": "h1-qqmusic/assets/qqmusic-reference.png",
+      "origin": "TMC web/public/icon/QQMUSIC_LOGO.ico; https://y.qq.com/favicon.ico",
+      "role": "QQ Music黄绿单音符标志"
+    }
+  ],
+  "prompts": [
+    "Create ONE application menu icon for the BBK H1 handheld, matching the ACTUAL factory icons in reference image 1 (a 480x272 original H1 desktop screenshot). Reference 1 is the authoritative STYLE source: specifically its bottom-row green silver-headphone icon 三步互动 at x148..198,y204..254, the film/player icon 飞天影音 next to it, and the top-row clock. Match their compact rounded-SQUARE footprint, restrained pale top highlight, darker colored lower panel, subtle horizontal stripe texture and layered small illustrative foreground. NOT a circular coin/medallion, not an oversized glossy 3D badge, not a modern flat iOS icon, not photorealistic. Reference 2 is the QQ Music LOGO source: its recognizable yellow roundel and green single musical-note silhouette. Design the H1 QQ Music icon as a muted forest-to-lime green rounded-square panel with a narrow light silver-green top highlight and a few soft horizontal bands, with a small silver headphone arch behind a crisp yellow-and-green QQ Music logo in the center/lower foreground. QQ Music logo must remain the dominant identifiable mark, exactly one note, no added writing. The headphone motif should be simple and compact like the original H1 三步互动 icon, no microscopic details. Match the visual density, edge radius, perspective restraint, lighting and native small-icon character of reference 1. Prioritize a convincing native 45x45 and 57x57 GUI icon when reduced. Front view, rounded square fills 92 percent of the square canvas, transparent only OUTSIDE the rounded-square corners. Produce only the icon, no desktop scene, no labels, letters, watermark, UI frame, external shadow or scattered pixels. Keep everything bounded inside the square.",
+    "Use case: precise-object-edit.\nAsset type: BBK H1 QQ Music application desktop icon, readable at 45x45 and 57x57 pixels.\nImage 1 is the edit target. Image 2 is the authoritative original H1 desktop style reference. Image 3 is the QQ Music mark reference.\nRemove the silver headphones COMPLETELY: both ear cups, their arch, all supports and shadows. Reconstruct the green horizontal-banded rounded-square panel cleanly where the headphones were. Preserve the existing rounded-square silhouette, restrained pale top highlight, lower green shading and simple yellow roundel with one green musical-note mark. Keep the QQ Music logo dominant and clear, centered within the tile. Do not add any other objects, letters, headphones, speakers, cables, music players, or decoration. Maintain the small factory H1 icon look from image 2. Avoid oversized glossy medallion styling or a photoreal render.\nClean the stray bright pixels outside the rounded square: the exterior must be completely transparent, including above the top edge, with a clean antialiased silhouette. Preserve true alpha transparency. Output only the single icon, no label, desktop, border, layout, or external shadow.",
+    "Use case: background-extraction. Extract ONLY the large green rounded-square QQ Music icon from the provided image. Delete every stray mark above and around it: especially white flecks above its top edge and neon green fringing at its left and right edges. The exterior of the main rounded rectangle must be empty transparent alpha, with exactly one clean continuous antialiased outline and no disconnected pixels. Keep the main icon itself unchanged, including its broad green horizontal bands, pale top, yellow circle and green single musical note. No headphones. No new border, no external shadow. Preserve the original square canvas and placement. Transparent background."
+  ],
+  "drafts": [
+    {
+      "path": "icon-h1-qq-v2.png",
+      "status": "rejected: circular badge did not match original H1 menu style"
+    },
+    {
+      "generated_file": "exec-9b190201-2e86-46bc-bc6d-23ae8eab4912.png",
+      "status": "rejected: user requested no headphones"
+    }
+  ],
+  "postprocessing": "Only size conversion and H1 resource packing; generated alpha preserved.",
+  "trademark": "QQ Music mark used as user-requested reference for an unofficial experimental client; no affiliation claim."
+}

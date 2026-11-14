@@ -1,0 +1,4 @@
+-r requirements-build.txt
+unicorn==2.1.4
+av==18.1.0
+pyserial==3.5
