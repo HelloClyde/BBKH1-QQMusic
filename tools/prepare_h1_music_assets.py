@@ -16,6 +16,6 @@ def prepare():
             parts.extend([f'static const uint32_t qm_logo_{size}_rgba[{size}*{size}]={{',
                           ',\n'.join(rows),'};',
                           f'static const qm_bitmap qm_logo_{size}={{{size},qm_logo_{size}_rgba}};'])
-    (ROOT/'h1-qqmusic/ui_assets.h').write_text('\n'.join(parts)+'\n')
+    (ROOT/'h1-qqmusic/ui_assets.h').write_text('\n'.join(parts)+'\n',encoding='ascii',newline='\n')
     print('Packed QQ Music logos directly from master at 22, 29, 50 and 68 pixels')
 if __name__=='__main__':prepare()

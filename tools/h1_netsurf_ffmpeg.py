@@ -8,6 +8,8 @@ ARCHIVES=tuple('ff'+name for name in LIBRARIES)
 def build(root,compile_group):
     source=root/'h1-netsurf/vendor/ffmpeg-0.6.7'
     shutil.copyfile(root/'h1-netsurf/config/ffmpeg.h',source/'config.h')
+    # Upstream ignores this configure output; recreate it in a clean checkout.
+    (source/'libavutil/avconfig.h').write_text('#ifndef AVUTIL_AVCONFIG_H\n#define AVUTIL_AVCONFIG_H\n#define AV_HAVE_BIGENDIAN 0\n#endif\n',encoding='ascii',newline='\n')
     config={k:('yes' if v=='1' else 'no') for k,v in re.findall(r'^#define (\w+) (\d+)$',(source/'config.h').read_text(),re.M)}
     for library in LIBRARIES:
         folder=source/('lib'+library)
