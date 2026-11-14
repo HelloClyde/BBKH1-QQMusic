@@ -1,43 +1,57 @@
 # BBK H1 · QQ音乐
 
-面向步步高 **H1/Y100 V1.41** 的非官方 QQ音乐客户端，原生 480×272 界面。
-H1 负责界面、账号、列表、歌词和 M4A 解复用；ESP32-S3 提供通用 Wi-Fi、HTTP 和 AAC 解码。
-日常使用只需 H1、ESP 和电源，不需要电脑或 NAS 常驻。项目代码采用 GPL-3.0，第三方组件分别保留许可。
+步步高 **H1/Y100 V1.41** 的非官方原生 QQ音乐客户端，480×272触屏界面。
+H1管理界面、账号、歌词和M4A解复用，ESP32-S3提供通用Wi-Fi、HTTP和AAC解码。
+日常使用不需要电脑或NAS常驻。应用采用GPL-3.0，第三方组件分别保留许可。
+
+## 仓库结构
+
+```text
+src/                 QQ音乐应用（首页、列表、账号、队列和播放器）
+  platform/          本应用使用的PCM、图片解码、AAC客户端、堆与libc边界
+  net/               USB传输调度，底层实现引用sdk
+  ui/                绘图形状和原生输入映射
+  runtime/           BDA入口、初始化与链接布局
+assets/              当前图标母版、字库源及许可
+sdk/                 固定版本的H1 SDK子模块
+third_party/         所需第三方库的源码和原始许可
+tests/               音乐测试；support为纯MIPS固件/HTTP/AAC边界模型
+tools/               构建、字库/图标生成、打包与仓库范围检查
+docs/                截图、验证边界和来源记录
+```
+
+仓库只包含音乐程序及其依赖，不包含新闻、Bilibili、浏览器、Wi-Fi设置或H1Debug应用。
+USB驱动、固件适配和H1NET协议直接使用SDK内的通用组件；没有复制另一个应用目录来满足include。
+图片模块只解码JPEG/PNG，AAC模块直接调用本应用回调；测试也不导入其他应用的框架或硬件调试CLI。
 
 ## 快速开始
 
-当前版本 **0.1.11，预览版**。在发布完成前可以按下面命令构建 `dist/H1QQMusic.bda`；
-发布后的成品在本仓库的 Releases 页面分发，下载 `H1QQMusic.bda` 或带目录的安装 ZIP。
+在[Releases](https://github.com/HelloClyde/BBKH1-QQMusic/releases)下载预览版BDA或安装ZIP。
+将 **`H1QQMusic.bda`** 复制到 **`A:\应用\程序\H1QQMusic.bda`**，保持原有账号/配置文件。
 
-1. 将 `H1QQMusic.bda` 放到 H1 的 **`A:\应用\程序\H1QQMusic.bda`**。
-2. ESP USB1 经**带数据的软线 OTG（USB-C 公头→USB-A 母口）**接 H1 Mini-USB 数据线；USB2 单独供电。
-   ESP 是 USB 主机，H1 是设备。不要把两个设备端直接互连。
-3. ESP 使用通用固件 **0.4.4**，先用“H1 Wi-Fi设置”扫描并保存 2.4GHz 网络，再打开 QQ音乐。
-   固件、板卡选型、J-OTG/供电及 Type-C CC 说明见 [H1 SDK ESP32 文档](https://github.com/HelloClyde/bbk-h1-bda-sdk/blob/63fa3c825feae5d9a1fa04572458fd5a5dbe847b/docs/esp32.md)。
-4. 正常启动会自动停止兼容的 H1Debug 并软件重新枚举，不需要日常换线。
-   仅支持已验证的 V1.41；启动时保持系统“USB连接”提示取消/否，交由应用使用 USB。
+1. ESP USB1通过带数据的软线OTG连接H1 Mini-USB数据线，USB2独立供电。ESP是USB主机，H1是设备。
+2. 使用ESP32-S3通用固件 **0.4.4**，先通过“H1 Wi-Fi设置”保存2.4GHz网络，再打开QQ音乐。
+3. 支持已插线启动，合作停止兼容H1Debug后软件重新枚举；联网应用依次独占USB。
+4. 启动时若系统询问是否连接USB，选择否/取消，让应用接管连接。
 
-| 操作 | 按键或触屏 |
+| 功能 | 按键/触屏 |
 | --- | --- |
-| 浏览/搜索 | H 热歌榜，S 原生中文/拼音搜索，上下选择、左右翻页；列表可上下拖动 |
-| 点播/暂停 | Enter 点播，播放页空格/Enter/P 暂停或恢复；可点触按钮 |
-| 音量/定位 | 上下调音量，左右前后10秒；触控进度条定位 |
-| 上下首 | N 上一首、M 下一首；使用点播时捕获的本页队列，最多12首 |
-| 模式 | B 或播放页右上按钮：顺序、列表循环、单曲循环、随机；真实结尾自动切歌 |
-| 后台播放 | Esc 回列表，侧栏“正在播放”回到同一首；再按 Esc 退出并停止 |
-| 登录 | A 账号，Q QQ扫码、W 微信扫码、R 刷新、L 退出登录 |
+| 浏览/搜索 | H热歌榜，S原生中文/拼音搜索，上下选择、左右翻页；列表上下拖动 |
+| 播放/暂停 | Enter点播，播放页空格/Enter/P暂停或恢复；触摸按钮 |
+| 音量/定位 | 上下调音量，左右跳转10秒；点击进度条 |
+| 上下首 | N上一首、M下一首，使用点播时捕获的本页队列（最多12首） |
+| 模式 | B或右上角按钮：顺序、列表循环、单曲循环、随机；真实EOF自动切歌 |
+| 后台播放 | Esc返回列表，侧栏“正在播放”回到同一首；再按Esc退出并停止 |
+| 登录 | A账号，Q QQ扫码、W微信扫码、R刷新、L退出登录 |
 
-顺序播放到本页末尾停止；单曲循环仍允许手动换歌；随机模式避免连续重复并保留上一首历史。
-自动切歌会跳过明确没有权限的歌曲，网络错误会停止并提示重试，不循环轰炸接口。
-扫码须由用户在手机确认，是否有播放权限仍由上游返回，不能用登录绕过付费权限。
-账号逻辑和 `A:\QQMusic.auth0/1` 均在 H1；ESP 不保存音乐账号。
-播放模式存于 `A:\QQMusic.cfg`，正常退出时写入。更新 BDA 不需要删除这三个文件。
-不要公开分享账号文件。封面、歌词和歌曲只在运行时请求，仓库和安装包不内置歌曲或用户凭据。
+顺序模式到本页末尾停止，单曲循环允许手动换歌，随机避免连续重复且保留上一首历史。
+自动切歌跳过明确无权限歌曲，网络错误停止并提示；扫码/登录不绕过上游播放权限。
+账号与授权逻辑在H1，凭据为`A:\QQMusic.auth0/1`，ESP不保存QQ音乐账号；勿公开分享凭据。
+模式在正常退出时保存到`A:\QQMusic.cfg`。歌曲、封面、歌词在运行时请求，不打包进仓库。
 
-### 从源码构建
+### 开发构建
 
-目前完整复现流程在 **Windows x64、Python 3.12、GNU MIPS 15.2.0** 上验证。
-工具链安装脚本带固定下载 SHA-256；也可通过 `H1_GNU_BIN` 指向相同版本的已有工具链。
+已验证Windows x64、Python3.12、GNU MIPS15.2.0；工具链下载含固定SHA-256校验。
 
 ```powershell
 git clone --recurse-submodules https://github.com/HelloClyde/BBKH1-QQMusic.git
@@ -46,66 +60,63 @@ git submodule update --init
 python -m pip install -r requirements-build.txt
 python tools/install_gnu_toolchain.py
 $env:H1_GNU_BIN = (Resolve-Path .tools/toolchain/bin).Path
+python tools/check_repository.py
 python tools/build_h1_qqmusic.py --all
 python tools/package_release.py
 ```
 
-正式版为 `dist/H1QQMusic.bda`，调试邮箱版为 `dist/H1QQMusicDbg.bda`；日常只安装正式版。
-`dist/release/` 包含正式 BDA、正确安装目录的 ZIP、构建信息和 SHA256SUMS。
-不会自动刷 ESP、上传 H1 或读取本机账号。构建采用相对路径、固定时间和稳定归档顺序。
-预生成的点阵字库及原始 HEX、图标母版及打包脚本一并提供，不依赖本机商业字体或图像服务。
+正式版`dist/H1QQMusic.bda`；`H1QQMusicDbg.bda`仅用于MIPS邮箱模型测试，不是H1Debug应用。
+`dist/release/`包含正式BDA、带“应用/程序”目录的安装ZIP、构建信息和SHA256SUMS。
+可设置`H1_GNU_BIN`复用相同版本工具链。构建使用相对路径、固定时间、稳定归档顺序；
+图标母版、字库HEX及生成器齐全，不依赖系统商业字体或在线图片服务。
 
 ```powershell
 python -m pip install -r requirements-test.txt
-python tools/test_h1_qqmusic_modes.py
-python tools/test_h1_qqmusic_buffer.py
-python tools/test_h1_qqmusic_navigation.py
+python tests/test_modes.py
+python tests/test_buffer.py
+python tests/test_navigation.py
 ```
 
-以上是实际链接 MIPS 程序和真实合成 AAC 解码测试，固件游标/输入/HTTP 为明确模型边界；不需要串口。
-独立的 Range/预取协议检查可运行 `python tools/test_h1_qqmusic_stream.py`，需 `HOST_CC` 或 PATH 中的 gcc。
+另外`python tests/test_stream.py`验证真实C协议/分段预取，需`HOST_CC`或PATH中的gcc。
+测试为实际链接MIPS程序和真实合成AAC，明确模拟固件/输入/DAC/HTTP边界，不打开串口。
 
 ## 截图
 
-![物理H1首页](docs/screenshots/hardware-home.png)
+![H1首页](docs/screenshots/hardware-home.png)
 
-物理 H1 0.1.11 首页，安装观察阶段、尚未完成 USB 交接，不作为联网或持续播放证明。
+物理H1的旧0.1.11安装观察截图，在USB交接前采集；不作为0.1.12的实体联网/试听证明。
 
-![MIPS模型播放页](docs/screenshots/model-player.png)
-![MIPS模型列表](docs/screenshots/model-list.png)
+![模型播放页](docs/screenshots/model-player.png)
+![模型列表](docs/screenshots/model-list.png)
 
-播放页和列表来自实际链接 MIPS 应用的480×272截图；使用本项目自制音频、合成封面和测试歌曲。
-没有将效果图、真实用户歌单或真实扫码凭据当作运行证据。
+模型截图运行实际链接MIPS程序，仅使用合成歌曲/封面和测试账户，无真实音乐或用户凭据。
 
 ## 依赖
 
-成品：H1/Y100 **V1.41**、有 PSRAM 的 ESP32-S3、通用固件0.4.4、数据 OTG线和独立电源。
-原生USB驱动按V1.41验证，不支持把本包直接用于未知系统版本；ESP32-S3只支持2.4GHz。
+成品：H1/Y100 **V1.41**、带PSRAM的ESP32-S3、通用固件0.4.4、数据OTG和独立电源。
+SDK子模块固定 **`63fa3c825feae5d9a1fa04572458fd5a5dbe847b`**，
+来自[HelloClyde/bbk-h1-bda-sdk](https://github.com/HelloClyde/bbk-h1-bda-sdk)。
+本次明确改为复用已公开的SDK通用USB/协议组件，避免复制其他应用的驱动目录。
+板卡选型、J-OTG/供电/Type-C CC、固件与Wi-Fi样例见[SDK文档](https://github.com/HelloClyde/bbk-h1-bda-sdk/blob/63fa3c825feae5d9a1fa04572458fd5a5dbe847b/docs/esp32.md)。
 
-构建：H1 SDK 子模块 `sdk/` 固定 **`067fe072477861dfc8949d7b1a55279fb92d2548`**，
-来源 [MrDefinition1999/bbk-h1-bda-sdk](https://github.com/MrDefinition1999/bbk-h1-bda-sdk)。
-沿用应用实际验证版本；通用固件/配网文档的新SDK fork独立发布，不悄悄升级本应用ABI。
-其余源码依赖：FFmpeg0.6.7（本应用使用MOV解复用）、musl1.2.5、TLSF3.1、cJSON、
-libpng1.6.43、zlib1.3.1、IJG JPEG9f、GNU Unifont16.0.04及原生输入所用Noto映射表。
-依赖源码、原许可与来源见 [THIRD_PARTY.md](THIRD_PARTY.md)。
-Python依赖在两个 requirements 文件中固定；仅测试需要 Unicorn/PyAV，成品不依赖电脑后端。
+其余为FFmpeg0.6.7（MOV解复用）、musl1.2.5、TLSF3.1、cJSON、libpng1.6.43、
+zlib1.3.1、IJG JPEG9f、GNU Unifont16.0.04。源码、许可和来源见[THIRD_PARTY.md](THIRD_PARTY.md)。
+Python依赖固定在requirements文件；Unicorn/PyAV只供测试，不是成品使用依赖。
 
-## 验证范围与限制
+## 验证与限制
 
-见 [验证记录](docs/VERIFICATION.md)。已记录真机安装、原生USB接管、既有扫码/后台播放及韩文显示反馈；
-0.1.11的约90秒短停改动、自动下一首和四模式的最终实体试听仍待确认。
-本版提前建立HTTP分段并储备已解码PCM，不把模型的等待时间直接称作真机提速。
-搜索/播放接口可能变更；提供C400标准M4A/AAC，不含个人歌单、收藏写入、无损、MV或QRC逐字歌词。
-扫码支持QQ/微信，但未将两种方式都写成已完成实体账号验收。
+见[验证边界](docs/VERIFICATION.md)。0.1.12整理仓库依赖和测试结构，未新增播放功能。
+近期约90秒短停改动、自动下一首/四模式仍待最终实体试听，不以模型通过代替物理听感。
+上游接口/地区/歌曲权限可能影响可用性；支持C400标准M4A/AAC，不含个人歌单/收藏写入、无损、MV或QRC逐字歌词。
+QQ/微信均有扫码流程，尚未把一次手机方式反馈扩大为两种方式全部完成实体验收。
 
 ## 感谢
 
-- HelloClyde 的 [Tesla Media Center](https://github.com/HelloClyde/tesla-media-center)，
-  固定参考 `9d7cb51cf5ddf3e02fa8d6e1c129168d11af4aae`，参考权限、队列、歌词和扫码流程。
-  上游GPL-3.0、文件指纹保留在 `h1-qqmusic/tmc-reference.json`。
-- MrDefinition1999 的 H1 BDA SDK，以及 H1 原生接口研究和硬件测试参与者。
-- FFmpeg、Rich Felker及musl贡献者、Matthew Conte/TLSF、Dave Gamble/cJSON、
-  libpng、zlib、IJG、Roman Czyborra、Paul Hardy和Unifont贡献者、Adobe/Noto贡献者。
+- HelloClyde的[Tesla Media Center](https://github.com/HelloClyde/tesla-media-center)，固定参考
+  `9d7cb51cf5ddf3e02fa8d6e1c129168d11af4aae`，GPL-3.0；参考权限、队列、歌词和扫码，指纹见`docs/tmc-reference.json`。
+- MrDefinition1999的H1 BDA SDK，以及H1接口研究与硬件测试参与者。
+- FFmpeg、Rich Felker及musl贡献者、Matthew Conte/TLSF、Dave Gamble/cJSON、libpng、zlib、IJG、
+  Roman Czyborra、Paul Hardy及Unifont贡献者。原生输入映射来源声明保留Adobe/Noto归属，未附其字形图像。
 
-QQ音乐名称、标志及上游内容属于各自权利人。本项目是非官方开源实验客户端，不代表腾讯或步步高。
-许可详情见 [LICENSE](LICENSE)、[THIRD_PARTY.md](THIRD_PARTY.md)。
+QQ音乐名称、标志及上游内容属于权利人，本项目不代表腾讯或步步高。
+许可证见[LICENSE](LICENSE)和[THIRD_PARTY.md](THIRD_PARTY.md)。

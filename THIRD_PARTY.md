@@ -1,29 +1,28 @@
 # 来源与许可
 
-应用原创代码、适配/测试和构建脚本按 GPL-3.0 提供，见 LICENSE；不将该许可覆盖到第三方组件。
-H1NET/USB原创部分沿用已获权利人同意的额外Apache-2.0许可，详见通用SDK；本应用整体仍为GPL-3.0。
+原创音乐应用、适配/测试和构建代码采用GPL-3.0；第三方组件保留各自许可，不重新套用应用许可。
 
-| 组件/路径 | 来源与许可 |
+| 组件 | 来源与许可 |
 | --- | --- |
-| `sdk/` | MrDefinition1999/bbk-h1-bda-sdk，固定067fe072477861dfc8949d7b1a55279fb92d2548，Apache-2.0；保留sdk/LICENSE/NOTICE |
-| TMC参考 | HelloClyde/tesla-media-center，9d7cb51cf5ddf3e02fa8d6e1c129168d11af4aae，GPL-3.0；参考指纹在h1-qqmusic/tmc-reference.json |
-| `h1-netsurf/vendor/ffmpeg-0.6.7/` | https://ffmpeg.org/releases/ffmpeg-0.6.7.tar.bz2 ，LGPL-2.1-or-later构建配置；原LICENSE/COPYING.*及逐文件声明保留；配置在h1-netsurf/config/ffmpeg.h。未启用GPL/nonfree组件 |
-| `h1-netsurf/vendor/musl-1.2.5/` | https://musl.libc.org/releases/musl-1.2.5.tar.gz ，MIT及COPYRIGHT列出的组件声明，保留完整COPYRIGHT |
-| `h1-netsurf/vendor/tlsf/` | Matthew Conte，TLSF3.1，BSD-3-Clause，许可正文位于tlsf.h |
-| `h1-qqmusic/vendor/cjson/` | Dave Gamble及cJSON贡献者，MIT，保留LICENSE及源文件声明 |
-| `h1-netsurf/vendor/libpng-1.6.43/` | https://download.sourceforge.net/libpng/libpng-1.6.43.tar.gz ，libpng-2.0，保留LICENSE |
-| `h1-netsurf/vendor/zlib-1.3.1/` | https://zlib.net/fossils/zlib-1.3.1.tar.gz ，Zlib，保留LICENSE |
-| `h1-netsurf/vendor/jpeg-9f/` | https://ijg.org/files/jpegsrc.v9f.tar.gz ，Independent JPEG Group，保留README中的许可/归属声明；部分文件许可见其原文 |
-| `h1-bilibili/fonts/`、音乐font.h | GNU Unifont16.0.04，Roman Czyborra、Paul Hardy及贡献者；选择SIL OFL-1.1，源HEX、哈希、上游双许可和OFL均保留。H1Music16仅选字打包，字形像素不变 |
-| `h1-wifi/browser/font.h` | Noto Sans CJK SC的已有点阵映射表，Adobe及贡献者，SIL OFL-1.1见同目录OFL.txt。音乐界面使用Unifont，此表供原生输入框GBK/Unicode映射；未附Windows字体文件 |
-| 图标 | 用户提供QQ音乐标志作为参考，imagegen生成H1圆角图标；母版及设计记录在h1-qqmusic/assets。名称和标志仍属权利人，不声称商标权 |
-| `tools/install_gnu_toolchain.py` | 从HelloClyde/bbk-h1-bda-sdk提交63fa3c825feae5d9a1fa04572458fd5a5dbe847b导入，Apache-2.0；工具链独立遵守GNU各组件许可，不放入源码仓库/安装包 |
+| `sdk/` | HelloClyde/bbk-h1-bda-sdk，63fa3c825feae5d9a1fa04572458fd5a5dbe847b，Apache-2.0。USB驱动、V1.41固件适配、H1NET直接从此子模块构建；保留sdk/LICENSE/NOTICE |
+| TMC参考 | HelloClyde/tesla-media-center，9d7cb51cf5ddf3e02fa8d6e1c129168d11af4aae，GPL-3.0；指纹在docs/tmc-reference.json |
+| `third_party/ffmpeg-0.6.7/` | https://ffmpeg.org/releases/ffmpeg-0.6.7.tar.bz2 ，LGPL-2.1-or-later配置；LICENSE/COPYING.*及逐文件声明保留，config/ffmpeg.h记录配置，未启用GPL/nonfree组件 |
+| `third_party/musl-1.2.5/` | https://musl.libc.org/releases/musl-1.2.5.tar.gz ，MIT及COPYRIGHT所列声明 |
+| `third_party/tlsf/` | Matthew Conte，TLSF3.1，BSD-3-Clause，许可全文在tlsf.h |
+| `third_party/cjson/` | Dave Gamble及cJSON贡献者，MIT，保留LICENSE |
+| `third_party/libpng-1.6.43/` | https://download.sourceforge.net/libpng/libpng-1.6.43.tar.gz ，libpng-2.0，保留LICENSE |
+| `third_party/zlib-1.3.1/` | https://zlib.net/fossils/zlib-1.3.1.tar.gz ，Zlib，保留LICENSE |
+| `third_party/jpeg-9f/` | https://ijg.org/files/jpegsrc.v9f.tar.gz ，IJG许可见README，保留逐文件原声明 |
+| `assets/fonts/`、src/font.h | GNU Unifont16.0.04，Roman Czyborra、Paul Hardy及贡献者；选择SIL OFL-1.1，完整源HEX/哈希/OFL/上游双许可保留。H1Music16仅选取打包，像素形状不变 |
+| `src/ui/ime_table.h` | 原生输入的Unicode/GB2312映射，提取自此前Noto映射表，保留Adobe/Noto来源和assets/fonts/Noto-OFL.txt；此处不含Noto字形像素或商业字体文件 |
+| `assets/`图标 | 用户以QQ音乐标志作视觉参考，imagegen生成当前H1图标；母版和设计记录保留，商标权仍归权利人 |
+| `tools/install_gnu_toolchain.py` | 来自H1 SDK63fa3c8，Apache-2.0。工具链独立遵守GNU组件许可，不进入源码/安装包 |
 
-`h1-netsurf/target/` 只包含格式化/堆/PCM适配，不链接NetSurf浏览器。
-`h1-bilibili/` 只复用通用AAC客户端、绘图和字体，不分发Bilibili应用。
-`h1-news/image.*` 只复用有界静态图片解码器，不分发新闻应用。
-源码保留原相对路径以减少已验证代码的搬移；没有固件/NAND、商业ROM、真实歌曲、个人凭据或转储。
+`src/platform/images.c`由此前有界图片解码器提取，仅JPEG/PNG解码；已删除新闻站点的URL策略。
+`src/platform/aac_remote.c`由此前共享H1NET AAC客户端提取，直接使用音乐回调，不包含视频/站点/账号逻辑。
+`src/ui/drawing.h`为共用像素几何；其他应用的前台、应用头文件、字形表、CLI和测试业务均未纳入。
+这些原创适配的历史来源不改变版权归属；项目整体仍以GPL-3.0提供。
 
-PyAV/FFmpeg测试依赖由开发者的Python环境安装，遵循其原许可；不进入H1正式BDA。
-发布包附带本文件、应用LICENSE和链接组件许可摘录。修改后的LGPL组件和完整可重建应用源码随仓库/tag提供；
-可用自己的兼容组件重新链接，禁止把旧构建目录或机器私有库当作发布依赖。
+测试support只模拟固件边界、网络和AAC，不带硬件串口客户端。PyAV/FFmpeg测试环境遵守其原许可，
+不进入正式BDA。没有BBK固件/NAND、商业ROM、真实歌曲或个人凭据。
+安装ZIP附许可文本；完整源码与固定SDK可重新构建/链接，未以私有库替代可重建源码。

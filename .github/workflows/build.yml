@@ -35,14 +35,17 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           "H1_GNU_BIN=$((Resolve-Path .tools/toolchain/bin).Path)" >> $env:GITHUB_ENV
       - name: Build exact native and model BDA
-        run: python tools/build_h1_qqmusic.py --all
+        run: |
+          python tools/check_repository.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python tools/build_h1_qqmusic.py --all
       - name: Actual linked MIPS queue, UI and buffering checks
         run: |
-          python tools/test_h1_qqmusic_modes.py
+          python tests/test_modes.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python tools/test_h1_qqmusic_buffer.py
+          python tests/test_buffer.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          python tools/test_h1_qqmusic_navigation.py
+          python tests/test_navigation.py
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Package the same checked build
         run: python tools/package_release.py
@@ -56,8 +59,8 @@ jobs:
         with:
           name: QQMusic-model-evidence
           path: |
-            build/h1-qqmusic/*/report.json
-            build/h1-qqmusic/*/*.png
+            build/qqmusic/*/report.json
+            build/qqmusic/*/*.png
           if-no-files-found: warn
   stream:
     runs-on: ubuntu-latest
@@ -71,11 +74,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Framed HTTP prefetch, backpressure and cleanup
-        run: python tools/test_h1_qqmusic_stream.py
+        run: python tools/check_repository.py && python tests/test_stream.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: QQMusic-stream-evidence
-          path: build/h1-qqmusic/stream-0.1.10/candidate/report.json
+          path: build/qqmusic/stream/report.json
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/')

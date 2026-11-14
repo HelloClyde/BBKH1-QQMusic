@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "master": "icon-h1-centered-v4.png",
+  "transparent_background": true,
+  "design": "浅灰圆角方形底，黄绿QQ Music单音符居中；无耳机、横纹或绿色背景。",
+  "references": [
+    {
+      "path": "docs/references/h1-menu-style.png",
+      "role": "H1 menu style reference image only"
+    },
+    {
+      "path": "assets/qqmusic-reference.png",
+      "role": "QQ Music trademark visual reference"
+    }
+  ],
+  "prompt": "Use case: logo-brand. Create one BBK H1 desktop icon for an unofficial QQ Music client.\nReference image 1 is the actual 480x272 factory H1 desktop: match its compact rounded-square icon proportions, particularly the restrained pale gray tile and subtle depth of its top-row clock/notebook. Reference image 2 is the QQ Music mark: use its yellow circular disk and green single note silhouette.\nPlace a perfectly round yellow disk with one clear green QQ musical-note mark EXACTLY at the geometric center of the square tile, both horizontally and vertically. The yellow disk center must be at canvas (50%,50%) and its diameter approximately 68% of the tile width. No downward displacement. Maintain equal visual margins above and below the yellow disk.\nThe tile background is clean pearl white to very light neutral silver-gray, with a tiny restrained pale top highlight, softly rounded corners and shallow edge shading like a small original H1 menu icon. The entire tile stays pale neutral gray. Keep the QQ yellow and green saturated and crisp. Readable when reduced to 45x45 pixels. Straight-on view.\nNO headphones, NO stripes, NO horizontal lines or bands, NO green tile background, NO texture or pattern, NO circular coin frame, NO extra objects, NO writing. The rounded-square tile fills about 94% of a square canvas with a narrow symmetrical margin. Fully transparent OUTSIDE the tile; absolutely no disconnected specks, white debris, green fringes or external shadow. Output only the single icon.",
+  "postprocessing": "Only resizing and H1 resource packing. Generated alpha preserved.",
+  "trademark": "Unofficial experimental client; user-requested QQ Music reference; no affiliation claim."
+}

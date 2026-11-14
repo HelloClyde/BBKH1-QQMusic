@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 ROOT=Path(__file__).resolve().parents[1]
 def prepare():
-    assets=ROOT/'h1-qqmusic/assets'
+    assets=ROOT/'assets'
     with Image.open(assets/'icon-h1-centered-v4.png') as opened:
         image=opened.convert('RGBA')
         image.resize((360,360),Image.Resampling.LANCZOS).save(assets/'icon.png')
@@ -16,6 +16,6 @@ def prepare():
             parts.extend([f'static const uint32_t qm_logo_{size}_rgba[{size}*{size}]={{',
                           ',\n'.join(rows),'};',
                           f'static const qm_bitmap qm_logo_{size}={{{size},qm_logo_{size}_rgba}};'])
-    (ROOT/'h1-qqmusic/ui_assets.h').write_text('\n'.join(parts)+'\n',encoding='ascii',newline='\n')
+    (ROOT/'src/ui_assets.h').write_text('\n'.join(parts)+'\n',encoding='ascii',newline='\n')
     print('Packed QQ Music logos directly from master at 22, 29, 50 and 68 pixels')
 if __name__=='__main__':prepare()
