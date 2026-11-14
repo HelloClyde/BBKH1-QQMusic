@@ -49,7 +49,7 @@ def main():
     parts.extend(','.join(hex(cp) for cp in chars[i:i+24])+',' for i in range(0,len(chars),24));parts+=['};','static const uint8_t bili_font_width[BILI_FONT_COUNT]={']
     parts.extend(','.join(str(w) for w in widths[i:i+48])+',' for i in range(0,len(chars),48));parts+=['};','static const uint16_t bili_font_rows[BILI_FONT_COUNT][16]={']
     parts.extend('{'+','.join(hex(r) for r in row)+'},' for row in rows);parts+=['};','#endif']
-    out=options.output or folder.parent/'font.h';out.write_text('\n'.join(parts)+'\n',encoding='ascii')
+    out=options.output or folder.parent/'font.h';out.write_text('\n'.join(parts)+'\n',encoding='ascii',newline='\n')
     proof=dict(name=name,source_sha256=digest,header_sha256=hashlib.sha256(out.read_bytes()).hexdigest(),glyphs=len(chars),ascii_cell=[8,16],cjk_cell=[16,16],GB2312_complete=True,JIS_X_0208_complete=options.japanese,japanese_codepoints=len(japanese),Hangul_syllables_complete=options.korean,korean_codepoints=len(korean),lossless_pixel_shapes=True,packed_bytes=len(chars)*35)
     (options.metadata or folder/'generated.json').write_text(json.dumps(proof,indent=2)+'\n');print(proof)
 if __name__=='__main__':main()
