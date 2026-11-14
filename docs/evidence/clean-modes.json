@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "physical_h1": false,
+  "physical_esp32": false,
+  "checks": [
+    "linked queue policy: counts 1..12; order bounds, wrap, single/manual skip, shuffle bag and actual previous/forward history",
+    "three real AAC streams automatically advance in background; final order track stops once; exact packet sequence and short-tail drain",
+    "list loop wraps at real EOF; single loop reopens same track; manual Next still changes song",
+    "touch chip and B cycle modes; shuffle Next avoids same track and Previous/Next retrace actual history",
+    "normal exit writes only owned 16-byte CRC config; fresh app restores mode and frees all resources",
+    "automatic order skips anonymous member track without a vkey request or retry loop",
+    ">=0.75 s real decoded reserve before output, zero empty reads; pause/resume/near-end seek drain and clean exit"
+  ],
+  "buffer_diag": [
+    826428753,
+    1,
+    65,
+    0,
+    50920,
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "remote_diag": [
+    826364482,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    6023,
+    67108,
+    16,
+    148,
+    0,
+    1,
+    1160168846,
+    2,
+    0
+  ],
+  "sha256": {
+    "tools/test_h1_qqmusic_modes.py": "a00c7308754a8cdd0e036d4bf5e56b1c7d50cb8756e13ad160d84cde136d0249",
+    "build/h1-qqmusic/H1QQMusicDbg.elf": "b1b6f21165a97cf7b126eee20bdc0fd0531d5fcb5f5b70588489a8be79e59d7b",
+    "dist/H1QQMusicDbg.bda": "20842c6faed287011b2f5c9a433cd31fb3ccae8639f8437fb6c8d7e885e4dc4d"
+  }
+}
